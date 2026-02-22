@@ -12,6 +12,7 @@ Display::Display(std::vector<DisplayRecord> *records) {
     records_ = records;
     char buf[32];
     timeDeltaSize_ = snprintf(buf, sizeof(buf), "%lu", timeDeltaMax_);
+    visibleRecords_ = height_ - 3; // two for header, one for footer
 }
 
 Display::~Display() {
@@ -70,8 +71,6 @@ void Display::refresh() {
 }
 
 void Display::handleInput(int ch) {
-    unsigned int visibleRows = height_ - 3; // two lines for header, one for footer
-
     switch (ch) {
         case 113: // q
             std::exit(0);
@@ -90,7 +89,7 @@ void Display::handleInput(int ch) {
             if (selectedRow_ + scrollOffset_ >= records_->size() - 1)
                 break;
 
-            if (selectedRow_ < visibleRows - 1)
+            if (selectedRow_ < visibleRecords_ - 1)
                 selectedRow_++;
             else 
                 scrollOffset_++;
@@ -103,7 +102,7 @@ void Display::handleInput(int ch) {
 
         case 71: // G
             if (records_->size() == 0) break;
-            selectedRow_ = std::min(visibleRows-1, static_cast<unsigned int>(records_->size()-1));
+            selectedRow_ = std::min(visibleRecords_-1, static_cast<unsigned int>(records_->size()-1));
             scrollOffset_ = records_->size() - 1 - selectedRow_;
             break;
 
@@ -112,5 +111,14 @@ void Display::handleInput(int ch) {
             selectedRow_ = 0;
             scrollOffset_ = 0;
             break;
+    }
+}
+
+void Display::newRecordInform(unsigned int position) {
+    if (position <= selectedRow_ + scrollOffset_) {
+        if (records_->size() > visibleRecords_)
+            scrollOffset_++;
+        else
+            selectedRow_++;
     }
 }

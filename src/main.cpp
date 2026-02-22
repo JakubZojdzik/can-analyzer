@@ -4,7 +4,7 @@
 #include "display_record.hpp"
 #include "display.hpp"
 
-void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg) {
+void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg, Display &d) {
     auto now = std::chrono::steady_clock::now();
 
     if (records.empty()) {
@@ -28,10 +28,11 @@ void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg) {
         records[start].msg = msg;
     } else {
         DisplayRecord newRecord{msg, now, 0, 0xff};
-        auto insertPos = records.begin() + start;
         if (records[start].msg.identifier < msg.identifier)
-            insertPos++;
+            start++;
+        auto insertPos = records.begin() + start;
         records.insert(insertPos, newRecord);
+        d.newRecordInform(start);
     }
 }
 
@@ -45,7 +46,7 @@ int main() {
 
     while(true) {
         transp.receive(msg);
-        handleFrame(records, msg);
+        handleFrame(records, msg, display);
         int ch = getch();
         display.handleInput(ch);
         display.refresh();
