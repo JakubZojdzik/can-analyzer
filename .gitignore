@@ -1,3 +1,4 @@
 build/
 can_analyzer
 .cache
+compile_commands.json
