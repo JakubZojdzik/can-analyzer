@@ -1,9 +1,8 @@
 #pragma once
-
 #include <cstdint>
 
 struct CANMessage {
-    uint32_t identifier;
+    unsigned long identifier;
     bool isRtr;
     bool isExtd;
     bool isSelf;

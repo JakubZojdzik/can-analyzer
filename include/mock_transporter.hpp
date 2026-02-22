@@ -5,11 +5,11 @@
 
 class MockTransporter : public Transporter {
 public:
-    MockTransporter(int numIds, uint32_t isExtd);
+    MockTransporter(int numIds, unsigned long isExtd);
     int receive(CANMessage& msg) override;
     int send(const CANMessage& msg) override;
 private:
-    std::vector<uint32_t> ids;
+    std::vector<unsigned long> ids;
     std::discrete_distribution<> dist;
     std::mt19937 gen;
 };

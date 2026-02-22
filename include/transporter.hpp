@@ -1,5 +1,6 @@
 #pragma once
 #include "can_message.hpp"
+#include <ncurses.h>
 
 class Transporter {
 public:

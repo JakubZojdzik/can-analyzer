@@ -1,7 +1,9 @@
-#include "../include/mock_transporter.hpp"
+#include "mock_transporter.hpp"
 #include <ctime>
+#include <thread>
+#include <chrono>
 
-MockTransporter::MockTransporter(int numIds, uint32_t isExtd) {
+MockTransporter::MockTransporter(int numIds, unsigned long isExtd) {
     srand(time(0));
     std::vector<int> weights;
     const uint32_t idMask = 0x7ff | ((uint32_t)-isExtd & 0x1ffff800);
@@ -25,6 +27,8 @@ int MockTransporter::receive(CANMessage& msg) {
     for (int i = 0; i < msg.dlc; i++) {
         msg.data[i] = random() & 0xff;
     }
+    std::chrono::milliseconds timespan(random()%100);
+    std::this_thread::sleep_for(timespan);
     return 6+msg.dlc;
 }
 
