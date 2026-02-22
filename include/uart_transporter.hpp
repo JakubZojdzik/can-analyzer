@@ -9,5 +9,5 @@ public:
     int receive(CANMessage& msg) override;
     int send(const CANMessage& msg) override;
 private:
-    int serialFd;
+    int serialFd = -1;
 };
