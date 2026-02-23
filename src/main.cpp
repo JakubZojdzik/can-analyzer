@@ -1,8 +1,14 @@
 #include <termios.h>
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <semaphore>
+#include "display.hpp"
 #include "mock_transporter.hpp"
 #include "display_record.hpp"
-#include "display.hpp"
+
+std::mutex recordsMutex;
+std::binary_semaphore refreshDisplay(0);
 
 void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg, Display &d) {
     auto now = std::chrono::steady_clock::now();
@@ -36,19 +42,40 @@ void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg, Display &
     }
 }
 
+void receiverThread(Transporter &transp, std::vector<DisplayRecord> &records, Display &d) {
+    CANMessage msg;
+    while(true) {
+        transp.receive(msg);
+        recordsMutex.lock();
+        handleFrame(records, msg, d);
+        recordsMutex.unlock();
+        refreshDisplay.release();
+    }
+}
+
+void drawThread(Display &d) {
+    while(true) {
+        refreshDisplay.acquire();
+        recordsMutex.lock();
+        d.refresh();
+        recordsMutex.unlock();
+    }
+}
+
 int main() {
     // unsigned long baudRate = B921600;
     MockTransporter transp(50, true);
-    CANMessage msg;
     std::vector<DisplayRecord> records;
     records.reserve(100);
     Display display(&records);
+    std::thread receiver(receiverThread, std::ref(transp), std::ref(records), std::ref(display));
+    std::thread drawer(drawThread, std::ref(display));
 
     while(true) {
-        transp.receive(msg);
-        handleFrame(records, msg, display);
-        int ch = getch();
+        int ch = getchar();
+        recordsMutex.lock();
         display.handleInput(ch);
-        display.refresh();
+        recordsMutex.unlock();
+        refreshDisplay.release();
     }
 }
