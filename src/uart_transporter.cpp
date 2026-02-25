@@ -30,10 +30,8 @@ void findFrameStart(int fd) {
     uint8_t magic[2] = {0, 0};
     while(true) {
         read(fd, &magic[0], 1);
-        // printf("%x ", magic[0]);
         if (magic[0] == 0xab) {
             read(fd, &magic[1], 1);
-            // printf("(%x) ", magic[1]);
             if (magic[1] == 0xcd) {
                 break;
             } else {

@@ -7,9 +7,9 @@ class Display {
 public:
     Display(std::vector<DisplayRecord> *records);
     ~Display();
-    void refresh();
     void handleInput(int ch);
-    void newRecordInform(unsigned int position);
+    void redraw();
+    void changeInform(RecordChange change);
 
 private:
     std::vector<DisplayRecord> *records_;
@@ -21,9 +21,9 @@ private:
     unsigned long timeDeltaMax_ = 99999999LU;
     int timeDeltaSize_;
     std::string welcomeMessage = "---== Can bus analyzer ==---";
-    std::string headerString = "  t delta   |  identifier  | RTR | body";
+    std::string headerString = "  identifier  | RTR | body";
 
+    void drawRecords(unsigned int startInd, unsigned int endInd);
     void drawHeader();
-    void drawList();
     void drawFooter();
 };

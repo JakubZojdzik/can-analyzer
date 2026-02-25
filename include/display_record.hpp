@@ -8,3 +8,8 @@ struct DisplayRecord {
     unsigned long timeDelta;
     uint8_t highlightBitmap;
 };
+
+struct RecordChange {
+    unsigned int position;
+    bool isNew;
+};

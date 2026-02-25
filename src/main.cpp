@@ -2,20 +2,19 @@
 #include <vector>
 #include <thread>
 #include <mutex>
-#include <semaphore>
+#include <cstring>
 #include "display.hpp"
 #include "uart_transporter.hpp"
 #include "mock_transporter.hpp"
 #include "display_record.hpp"
 
 std::mutex recordsMutex;
-std::binary_semaphore refreshDisplay(0);
 
 void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg, Display &d) {
     auto now = std::chrono::steady_clock::now();
-
     if (records.empty()) {
         records.push_back({msg, now, 0, 0xff});
+        d.changeInform(RecordChange(0, true));
         return;
     }
 
@@ -32,14 +31,18 @@ void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg, Display &
         auto prev = records[start].timestamp;
         records[start].timestamp = now;
         records[start].timeDelta = std::chrono::duration_cast<std::chrono::milliseconds>(now - prev).count();
+        if (records[start].msg.dlc == msg.dlc && std::memcmp(records[start].msg.data, msg.data, msg.dlc)) {
+            return;
+        }
         records[start].msg = msg;
+        d.changeInform(RecordChange(start, false));
     } else {
         DisplayRecord newRecord{msg, now, 0, 0xff};
         if (records[start].msg.identifier < msg.identifier)
             start++;
         auto insertPos = records.begin() + start;
         records.insert(insertPos, newRecord);
-        d.newRecordInform(start);
+        d.changeInform(RecordChange(start, true));
     }
 }
 
@@ -47,39 +50,27 @@ void receiverThread(Transporter &transp, std::vector<DisplayRecord> &records, Di
     CANMessage msg;
     while(true) {
         transp.receive(msg);
-        printf("%lx", msg.identifier);
         recordsMutex.lock();
         handleFrame(records, msg, d);
-        recordsMutex.unlock();
-        refreshDisplay.release();
-    }
-}
-
-void drawThread(Display &d) {
-    while(true) {
-        refreshDisplay.acquire();
-        recordsMutex.lock();
-        d.refresh();
         recordsMutex.unlock();
     }
 }
 
 int main() {
     unsigned long baudRate = B921600;
-    UARTTransporter transp("/dev/ttyUSB0", baudRate);
+    // UARTTransporter transp("/dev/ttyUSB0", baudRate);
+    MockTransporter transp(50, true);
 
-    // MockTransporter transp(50, true);
     std::vector<DisplayRecord> records;
     records.reserve(100);
     Display display(&records);
     std::thread receiver(receiverThread, std::ref(transp), std::ref(records), std::ref(display));
-    std::thread drawer(drawThread, std::ref(display));
 
     while(true) {
         int ch = getchar();
         recordsMutex.lock();
         display.handleInput(ch);
+        display.redraw();
         recordsMutex.unlock();
-        refreshDisplay.release();
     }
 }

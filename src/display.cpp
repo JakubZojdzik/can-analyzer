@@ -12,6 +12,9 @@ Display::Display(std::vector<DisplayRecord> *records) {
     char buf[32];
     timeDeltaSize_ = snprintf(buf, sizeof(buf), "%lu", timeDeltaMax_);
     visibleRecords_ = height_ - 3; // two for header, one for footer
+    drawHeader();
+    drawFooter();
+    refresh();
 }
 
 Display::~Display() {
@@ -27,20 +30,24 @@ void Display::drawHeader() {
     mvprintw(1, 0, "%s", headerString.c_str());
 }
 
-void Display::drawList() {
-    unsigned int currY = 2;
-    while (currY < height_ - 1 && scrollOffset_ + currY - 2 < records_->size()) {
-        DisplayRecord curr = (*records_)[scrollOffset_ + currY - 2];
-        unsigned long tDelta = std::min(timeDeltaMax_, curr.timeDelta);
-        if (currY - 2 == selectedRow_) {
+
+void Display::drawFooter() {
+    mvprintw(height_-1, 0, "Row: %u  |  Scroll: %u", selectedRow_, scrollOffset_);
+}
+
+
+void Display::drawRecords(unsigned int startInd, unsigned int endInd) {
+    unsigned int i = std::max(startInd, scrollOffset_);
+    unsigned int currY = i - scrollOffset_;
+    while (i <= endInd && currY < height_ - 3 && scrollOffset_ + currY < records_->size()) {
+        DisplayRecord curr = (*records_)[i];
+        move(currY + 2, 0);
+        clrtoeol();
+        if (currY == selectedRow_) {
             attron(A_REVERSE);
         }
-        mvprintw(
-            currY,
-            0,
-            "  %*lu  |   %08lX   |  %d  | ",
-            timeDeltaSize_,
-            tDelta,
+        printw(
+            "   %08lX   |  %d  | ",
             curr.msg.identifier,
             curr.msg.isRtr & 1
         );
@@ -48,27 +55,35 @@ void Display::drawList() {
             printw("%02X ", curr.msg.data[i]);
         }
 
-        if (currY - 2 == selectedRow_) {
+        if (currY == selectedRow_) {
             attroff(A_REVERSE);
         }
         currY++;
+        i++;
+    }
+    refresh();
+}
+
+void Display::changeInform(RecordChange change) {
+    if (change.isNew && change.position <= selectedRow_ + scrollOffset_) {
+        if (records_->size() > visibleRecords_)
+            scrollOffset_++;
+        else
+            selectedRow_++;
+    }
+
+    if (change.position < scrollOffset_ || change.position >= scrollOffset_ + visibleRecords_)
+        return;
+
+    if (change.isNew) {
+        drawRecords(change.position, records_->size());
+    } else {
+        drawRecords(change.position, change.position);
     }
 }
 
-void Display::drawFooter() {
-    mvprintw(height_-1, 0, "Row: %u  |  Scroll: %u", selectedRow_, scrollOffset_);
-}
-
-
-void Display::refresh() {
-    clear();
-    getmaxyx(stdscr, height_, width_);
-
-    drawHeader();
-    drawList();
-    drawFooter();
-
-    ::refresh();
+void Display::redraw() {
+    drawRecords(0, records_->size());
 }
 
 void Display::handleInput(int ch) {
@@ -116,11 +131,3 @@ void Display::handleInput(int ch) {
     }
 }
 
-void Display::newRecordInform(unsigned int position) {
-    if (position <= selectedRow_ + scrollOffset_) {
-        if (records_->size() > visibleRecords_)
-            scrollOffset_++;
-        else
-            selectedRow_++;
-    }
-}
