@@ -4,6 +4,7 @@
 #include <mutex>
 #include <semaphore>
 #include "display.hpp"
+#include "uart_transporter.hpp"
 #include "mock_transporter.hpp"
 #include "display_record.hpp"
 
@@ -46,6 +47,7 @@ void receiverThread(Transporter &transp, std::vector<DisplayRecord> &records, Di
     CANMessage msg;
     while(true) {
         transp.receive(msg);
+        printf("%lx", msg.identifier);
         recordsMutex.lock();
         handleFrame(records, msg, d);
         recordsMutex.unlock();
@@ -63,8 +65,10 @@ void drawThread(Display &d) {
 }
 
 int main() {
-    // unsigned long baudRate = B921600;
-    MockTransporter transp(50, true);
+    unsigned long baudRate = B921600;
+    UARTTransporter transp("/dev/ttyUSB0", baudRate);
+
+    // MockTransporter transp(50, true);
     std::vector<DisplayRecord> records;
     records.reserve(100);
     Display display(&records);

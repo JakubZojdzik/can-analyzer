@@ -4,6 +4,45 @@
 #include <termios.h>
 #include <system_error>
 
+void readExact(int fd, void* buffer, size_t size)
+{
+    uint8_t* ptr = static_cast<uint8_t*>(buffer);
+    size_t total = 0;
+
+    while (total < size) {
+        ssize_t n = read(fd, ptr + total, size - total);
+
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            throw std::system_error(errno, std::generic_category(), "read failed");
+        }
+
+        if (n == 0) {
+            throw std::runtime_error("Serial device closed");
+        }
+
+        total += n;
+    }
+}
+
+void findFrameStart(int fd) {
+    uint8_t magic[2] = {0, 0};
+    while(true) {
+        read(fd, &magic[0], 1);
+        // printf("%x ", magic[0]);
+        if (magic[0] == 0xab) {
+            read(fd, &magic[1], 1);
+            // printf("(%x) ", magic[1]);
+            if (magic[1] == 0xcd) {
+                break;
+            } else {
+                magic[0] = magic[1];
+            }
+        }
+    }
+}
+
 UARTTransporter::UARTTransporter(const std::string& portName, int baudRate) {
     const int fd = open(portName.c_str(), O_RDWR | O_NOCTTY);
     if (fd < 0) {
@@ -42,20 +81,27 @@ UARTTransporter::UARTTransporter(const std::string& portName, int baudRate) {
 }
 
 int UARTTransporter::receive(CANMessage& msg) {
-    msg.identifier = 0;
-    if (read(serialFd, &msg.identifier, 4) != 4)
-        throw std::system_error(errno, std::generic_category(), "read failed");
+    findFrameStart(serialFd);
+    uint8_t idBytes[4];
+    readExact(serialFd, idBytes, 4);
+    msg.identifier =
+        (uint32_t(idBytes[0]) << 24) |
+        (uint32_t(idBytes[1]) << 16) |
+        (uint32_t(idBytes[2]) << 8)  |
+        (uint32_t(idBytes[3]));
+
     uint8_t bits;
-    if (read(serialFd, &bits, 1) != 1)
-        throw std::system_error(errno, std::generic_category(), "read failed");
+    readExact(serialFd, &bits, 1);
     msg.isRtr = bits & 1;
     msg.isExtd = bits & 2;
     msg.isSelf = bits & 4;
-    if (read(serialFd, &msg.dlc, 1) != 1)
-        throw std::system_error(errno, std::generic_category(), "read failed");
-    if (read(serialFd, msg.data, msg.dlc) != static_cast<ssize_t>(msg.dlc))
-        throw std::system_error(errno, std::generic_category(), "read failed");
-    return 6+msg.dlc;
+
+    readExact(serialFd, &msg.dlc, 1);
+    if (msg.dlc > 8)
+        throw std::runtime_error("Invalid DLC");
+
+    readExact(serialFd, msg.data, msg.dlc);
+    return 6 + msg.dlc;
 }
 
 int UARTTransporter::send(const CANMessage& msg) {

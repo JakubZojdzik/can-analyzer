@@ -4,7 +4,6 @@
 
 Display::Display(std::vector<DisplayRecord> *records) {
     initscr();
-    timeout(0);
     raw();
     noecho();
     keypad(stdscr, TRUE);
@@ -21,8 +20,10 @@ Display::~Display() {
 
 void Display::drawHeader() {
     attron(A_REVERSE);
+    attron(A_BOLD);
     mvprintw(0, width_/2 - size(welcomeMessage)/2, "%s", welcomeMessage.c_str());
     attroff(A_REVERSE);
+    attroff(A_BOLD);
     mvprintw(1, 0, "%s", headerString.c_str());
 }
 
@@ -73,6 +74,7 @@ void Display::refresh() {
 void Display::handleInput(int ch) {
     switch (ch) {
         case 113: // q
+            endwin();
             std::exit(0);
             break;
 
