@@ -31,7 +31,7 @@ void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg, Display &
         auto prev = records[start].timestamp;
         records[start].timestamp = now;
         records[start].timeDelta = std::chrono::duration_cast<std::chrono::milliseconds>(now - prev).count();
-        if (records[start].msg.dlc == msg.dlc && std::memcmp(records[start].msg.data, msg.data, msg.dlc)) {
+        if (records[start].msg.dlc == msg.dlc && !std::memcmp(records[start].msg.data, msg.data, msg.dlc)) {
             return;
         }
         records[start].msg = msg;
