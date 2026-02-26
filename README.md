@@ -55,9 +55,15 @@ Other:
 There is separate binary compiled for sending CAN frames to UART. It uses exactly the same protocol.
 
 ```
-can_sender --help
-Usage: ./build/can_sender <device> <id> <data_hex>
+$ can_sender --help
+Usage: can_sender <device> <id> <data_hex>
   device   - UART device path
   id       - frame id in hex
   data_hex - payload in hex
 ```
+
+## Results
+
+Thanks to running UART receiver in parallel in separate thread, the app is quite efficient and usable. The interace also is good enaugh to do some basic reversing.
+
+![screenshot](./screenshots/img1.png)

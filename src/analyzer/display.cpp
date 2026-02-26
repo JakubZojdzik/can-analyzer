@@ -84,6 +84,7 @@ void Display::changeInform(RecordChange change) {
 }
 
 void Display::redraw() {
+    drawFooter();
     drawRecords(0, records_->size());
 }
 
