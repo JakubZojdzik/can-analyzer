@@ -7,7 +7,7 @@ size_t serializeCanMessage(CANMessage &msg, uint8_t *buffer) {
     buffer[0] = 0xab;
     buffer[1] = 0xbc;
     std::memcpy(&buffer[2], &msg.identifier, 4);
-    buffer[6] = (msg.isRtr & 1) | ((msg.isExtd & 1) << 1) | ((msg.isSelf & 1) << 2);
+    buffer[6] = (msg.isRtr & 1) | ((msg.isExtd & 1) << 1);
     buffer[7] = msg.dlc;
     std::memcpy(&buffer[8], &msg.data, msg.dlc);
     return msg.dlc + 8;
@@ -22,7 +22,6 @@ void deserializeCanMessage(uint8_t *byteStream, CANMessage &msg) {
 
     msg.isRtr = byteStream[6] & 1;
     msg.isExtd = byteStream[6] & 2;
-    msg.isSelf = byteStream[6] & 4;
 
     msg.dlc = byteStream[7];
     if (msg.dlc > 8)

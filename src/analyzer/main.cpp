@@ -56,7 +56,28 @@ void receiverThread(Transporter &transp, std::vector<DisplayRecord> &records, Di
     }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc >= 2) {
+        if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
+            printf(
+                "CAN Analyzer\n"
+                "Nawigation:\n"
+                "  UP    - k, up arrow\n"
+                "  DOWN  - j, down arrow\n"
+                "  BEGIN - g\n"
+                "  END   - G\n"
+                "Other:\n"
+                "  clear - c\n"
+                "  copy  - y\n"
+                "  exit  - q\n"
+            );
+            return 0;
+        } else {
+            printf("Invalid cli option %s\n", argv[1]);
+            return 0;
+        }
+    }
+
     unsigned long baudRate = B921600;
     // UARTTransporter transp("/dev/ttyUSB0", baudRate);
     MockTransporter transp(50, true);

@@ -52,7 +52,6 @@ int main(int argc, char *argv[]) {
     msg.identifier = id;
     msg.isRtr = false;
     msg.isExtd = (id > 0x7FF);
-    msg.isSelf = false;
 
     if (!parseHex(dataStr, msg.data, msg.dlc)) {
         std::fprintf(stderr, "invalid data: '%s'\n", dataStr);

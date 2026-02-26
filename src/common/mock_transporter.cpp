@@ -22,7 +22,6 @@ size_t MockTransporter::receive(CANMessage& msg) {
     int bits = random();
     msg.isRtr = bits & 1;
     msg.isExtd = (bits & 2) >> 1;
-    msg.isSelf = (bits & 4) >> 2;
     msg.dlc = (random() % 8) + 1;
     for (int i = 0; i < msg.dlc; i++) {
         msg.data[i] = random() & 0xff;
