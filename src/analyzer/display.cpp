@@ -129,6 +129,23 @@ void Display::handleInput(int ch) {
             selectedRow_ = 0;
             scrollOffset_ = 0;
             break;
+
+        case 121: // y
+            unsigned int idx = selectedRow_ + scrollOffset_;
+            if (idx < records_->size()) {
+                const CANMessage &m = (*records_)[idx].msg;
+                char buf[32];
+                int pos = std::snprintf(buf, sizeof(buf), "%lX ", m.identifier);
+                for (uint8_t i = 0; i < m.dlc; i++)
+                    pos += std::snprintf(buf + pos, sizeof(buf) - pos, "%02X", m.data[i]);
+
+                FILE *clip = popen("xclip -selection clipboard", "w");
+                if (clip) {
+                    std::fputs(buf, clip);
+                    pclose(clip);
+                }
+            }
+            break;
     }
 }
 
