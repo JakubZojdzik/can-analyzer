@@ -17,7 +17,7 @@ MockTransporter::MockTransporter(int numIds, unsigned long isExtd) {
     dist = std::discrete_distribution<>(weights.begin(), weights.end());
 }
 
-int MockTransporter::receive(CANMessage& msg) {
+size_t MockTransporter::receive(CANMessage& msg) {
     msg.identifier = ids[dist(gen)];
     int bits = random();
     msg.isRtr = bits & 1;
@@ -32,7 +32,7 @@ int MockTransporter::receive(CANMessage& msg) {
     return 6+msg.dlc;
 }
 
-int MockTransporter::send(const CANMessage& msg) {
+size_t MockTransporter::send(CANMessage& msg) {
     return -1;
 }
 

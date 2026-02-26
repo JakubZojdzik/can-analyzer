@@ -1,5 +1,6 @@
 #include <ncurses.h>
 #include <cstdlib>
+#include <cstdio>
 #include "display.hpp"
 
 Display::Display(std::vector<DisplayRecord> *records) {

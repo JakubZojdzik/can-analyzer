@@ -5,6 +5,6 @@
 class Transporter {
 public:
     virtual ~Transporter() = default;
-    virtual int receive(CANMessage& msg) = 0; // blocking, no timeout
-    virtual int send(const CANMessage& msg) = 0;
+    virtual size_t receive(CANMessage& msg) = 0; // blocking, no timeout
+    virtual size_t send(CANMessage& msg) = 0;
 };

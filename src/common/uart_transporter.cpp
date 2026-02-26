@@ -1,45 +1,10 @@
 #include "uart_transporter.hpp"
+#include "can_message.hpp"
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
 #include <system_error>
 
-void readExact(int fd, void* buffer, size_t size)
-{
-    uint8_t* ptr = static_cast<uint8_t*>(buffer);
-    size_t total = 0;
-
-    while (total < size) {
-        ssize_t n = read(fd, ptr + total, size - total);
-
-        if (n < 0) {
-            if (errno == EINTR)
-                continue;
-            throw std::system_error(errno, std::generic_category(), "read failed");
-        }
-
-        if (n == 0) {
-            throw std::runtime_error("Serial device closed");
-        }
-
-        total += n;
-    }
-}
-
-void findFrameStart(int fd) {
-    uint8_t magic[2] = {0, 0};
-    while(true) {
-        read(fd, &magic[0], 1);
-        if (magic[0] == 0xab) {
-            read(fd, &magic[1], 1);
-            if (magic[1] == 0xcd) {
-                break;
-            } else {
-                magic[0] = magic[1];
-            }
-        }
-    }
-}
 
 UARTTransporter::UARTTransporter(const std::string& portName, int baudRate) {
     const int fd = open(portName.c_str(), O_RDWR | O_NOCTTY);
@@ -78,15 +43,46 @@ UARTTransporter::UARTTransporter(const std::string& portName, int baudRate) {
     serialFd = fd;
 }
 
-int UARTTransporter::receive(CANMessage& msg) {
-    findFrameStart(serialFd);
-    uint8_t idBytes[4];
-    readExact(serialFd, idBytes, 4);
-    msg.identifier =
-        (uint32_t(idBytes[0]) << 24) |
-        (uint32_t(idBytes[1]) << 16) |
-        (uint32_t(idBytes[2]) << 8)  |
-        (uint32_t(idBytes[3]));
+static void readExact(int fd, void* buffer, size_t size)
+{
+    uint8_t* ptr = static_cast<uint8_t*>(buffer);
+    size_t total = 0;
+
+    while (total < size) {
+        ssize_t n = read(fd, ptr + total, size - total);
+
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            throw std::system_error(errno, std::generic_category(), "read failed");
+        }
+
+        if (n == 0) {
+            throw std::runtime_error("Serial device closed");
+        }
+
+        total += n;
+    }
+}
+
+static void syncMagicBytes(int fd) {
+    uint8_t magic[2] = {0, 0};
+    while(true) {
+        read(fd, &magic[0], 1);
+        if (magic[0] == 0xab) {
+            read(fd, &magic[1], 1);
+            if (magic[1] == 0xcd) {
+                break;
+            } else {
+                magic[0] = magic[1];
+            }
+        }
+    }
+}
+
+size_t UARTTransporter::receive(CANMessage& msg) {
+    syncMagicBytes(serialFd);
+    readExact(serialFd, &msg.identifier, 4);
 
     uint8_t bits;
     readExact(serialFd, &bits, 1);
@@ -102,8 +98,10 @@ int UARTTransporter::receive(CANMessage& msg) {
     return 6 + msg.dlc;
 }
 
-int UARTTransporter::send(const CANMessage& msg) {
-    return -1;
+size_t UARTTransporter::send(CANMessage& msg) {
+    uint8_t buf[16];
+    size_t nbyte = serializeCanMessage(msg, buf);
+    return write(serialFd, buf, nbyte);
 }
 
 UARTTransporter::~UARTTransporter() {

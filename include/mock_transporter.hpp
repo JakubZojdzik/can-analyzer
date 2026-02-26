@@ -6,8 +6,8 @@
 class MockTransporter : public Transporter {
 public:
     MockTransporter(int numIds, unsigned long isExtd);
-    int receive(CANMessage& msg) override;
-    int send(const CANMessage& msg) override;
+    size_t receive(CANMessage& msg) override;
+    size_t send(CANMessage& msg) override;
 private:
     std::vector<unsigned long> ids;
     std::discrete_distribution<> dist;
