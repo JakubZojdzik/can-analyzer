@@ -3,6 +3,8 @@
 #include <thread>
 #include <mutex>
 #include <cstring>
+#include <cstdio>
+#include <cerrno>
 #include "display.hpp"
 #include "uart_transporter.hpp"
 #include "mock_transporter.hpp"
@@ -46,17 +48,39 @@ void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg, Display &
     }
 }
 
-void receiverThread(Transporter &transp, std::vector<DisplayRecord> &records, Display &d) {
+void recordFrame(CANMessage msg, FILE *f) {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    struct tm tm;
+    localtime_r(&ts.tv_sec, &tm);
+    std::fprintf(f,
+        "%02d:%02d:%02d.%03ld; %08lX; %d; ",
+        tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec / 1000000,
+        msg.identifier,
+        msg.isRtr & 1
+    );
+    for (int i = 0; i < msg.dlc; i++) {
+        std::fprintf(f, "%02X ", msg.data[i]);
+    }
+    std::fprintf(f, "\n");
+    std::fflush(f);
+}
+
+
+void receiverThread(Transporter &transp, std::vector<DisplayRecord> &records, Display &d, FILE *recording) {
     CANMessage msg;
     while(true) {
         transp.receive(msg);
         recordsMutex.lock();
         handleFrame(records, msg, d);
+        if (recording)
+            recordFrame(msg, recording);
         recordsMutex.unlock();
     }
 }
 
 int main(int argc, char *argv[]) {
+    FILE *recording = NULL;
     if (argc >= 2) {
         if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
             printf(
@@ -72,6 +96,15 @@ int main(int argc, char *argv[]) {
                 "  exit  - q\n"
             );
             return 0;
+        } else if (!strcmp(argv[1], "-r") || !strcmp(argv[1], "--record")) {
+            if (argc != 3) {
+                printf("Invalid --recording flag usage\n");
+            }
+            recording = std::fopen(argv[2], "w");
+            if (!recording) {
+                std::fprintf(stderr, "Failed to open %s: %s\n", argv[2], std::strerror(errno));
+                return 1;
+            }
         } else {
             printf("Invalid cli option %s\n", argv[1]);
             return 0;
@@ -79,18 +112,22 @@ int main(int argc, char *argv[]) {
     }
 
     unsigned long baudRate = B921600;
-    // UARTTransporter transp("/dev/ttyUSB0", baudRate);
-    MockTransporter transp(50, true);
+    UARTTransporter transp("/dev/ttyUSB0", baudRate);
+    // MockTransporter transp(50, true);
 
     std::vector<DisplayRecord> records;
     records.reserve(100);
     Display display(&records);
-    std::thread receiver(receiverThread, std::ref(transp), std::ref(records), std::ref(display));
+    std::thread receiver(receiverThread, std::ref(transp), std::ref(records), std::ref(display), recording);
 
     while(true) {
         int ch = getchar();
         recordsMutex.lock();
-        display.handleInput(ch);
+        if (display.handleInput(ch)) {
+            if (recording)
+                fclose(recording);
+            std::exit(0);
+        }
         display.redraw();
         recordsMutex.unlock();
     }

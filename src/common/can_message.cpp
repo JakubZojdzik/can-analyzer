@@ -5,7 +5,7 @@
 
 size_t serializeCanMessage(CANMessage &msg, uint8_t *buffer) {
     buffer[0] = 0xab;
-    buffer[1] = 0xbc;
+    buffer[1] = 0xcd;
     std::memcpy(&buffer[2], &msg.identifier, 4);
     buffer[6] = (msg.isRtr & 1) | ((msg.isExtd & 1) << 1);
     buffer[7] = msg.dlc;

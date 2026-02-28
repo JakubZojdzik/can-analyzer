@@ -7,7 +7,7 @@ class Display {
 public:
     Display(std::vector<DisplayRecord> *records);
     ~Display();
-    void handleInput(int ch);
+    int handleInput(int ch);
     void redraw();
     void changeInform(RecordChange change);
 

@@ -87,7 +87,7 @@ size_t UARTTransporter::receive(CANMessage& msg) {
     uint8_t bits;
     readExact(serialFd, &bits, 1);
     msg.isRtr = bits & 1;
-    msg.isExtd = bits & 2;
+    msg.isExtd = (bits & 2) >> 1;
 
     readExact(serialFd, &msg.dlc, 1);
     if (msg.dlc > 8)

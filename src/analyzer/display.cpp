@@ -33,7 +33,9 @@ void Display::drawHeader() {
 
 
 void Display::drawFooter() {
-    mvprintw(height_-1, 0, "Row: %u  |  Scroll: %u", selectedRow_, scrollOffset_);
+    move(height_-1, 0);
+    clrtoeol();
+    printw("Row: %u  |  Scroll: %u", selectedRow_, scrollOffset_);
 }
 
 
@@ -88,11 +90,11 @@ void Display::redraw() {
     drawRecords(0, records_->size());
 }
 
-void Display::handleInput(int ch) {
+int Display::handleInput(int ch) {
     switch (ch) {
         case 113: // q
             endwin();
-            std::exit(0);
+            return 1;
             break;
 
         case KEY_UP:
@@ -148,5 +150,6 @@ void Display::handleInput(int ch) {
             }
             break;
     }
+    return 0;
 }
 
