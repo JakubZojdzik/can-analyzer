@@ -2,3 +2,6 @@ build/
 can_analyzer
 .cache
 compile_commands.json
+notes.txt
+*.log
+recordings/

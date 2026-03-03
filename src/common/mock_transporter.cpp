@@ -26,7 +26,7 @@ size_t MockTransporter::receive(CANMessage& msg) {
     for (int i = 0; i < msg.dlc; i++) {
         msg.data[i] = random() & 0xff;
     }
-    std::chrono::milliseconds timespan(random()%1000);
+    std::chrono::milliseconds timespan(random()%100);
     std::this_thread::sleep_for(timespan);
     return 6+msg.dlc;
 }

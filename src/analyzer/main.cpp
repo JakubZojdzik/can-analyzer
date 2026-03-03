@@ -49,16 +49,15 @@ void handleFrame(std::vector<DisplayRecord> &records, CANMessage &msg, Display &
 }
 
 void recordFrame(CANMessage msg, FILE *f) {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    struct tm tm;
-    localtime_r(&ts.tv_sec, &tm);
+    double seconds = msg.timestamp / 1'000'000.0;
+
     std::fprintf(f,
-        "%02d:%02d:%02d.%03ld; %08lX; %d; ",
-        tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec / 1000000,
+        "%.6f; %08X; %d; ",
+        seconds,
         msg.identifier,
         msg.isRtr & 1
     );
+
     for (int i = 0; i < msg.dlc; i++) {
         std::fprintf(f, "%02X ", msg.data[i]);
     }
@@ -85,6 +84,7 @@ int main(int argc, char *argv[]) {
         if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
             printf(
                 "CAN Analyzer\n"
+                "-r | --record <path> saves all frame recordings into file located in <path>\n"
                 "Nawigation:\n"
                 "  UP    - k, up arrow\n"
                 "  DOWN  - j, down arrow\n"
@@ -112,8 +112,8 @@ int main(int argc, char *argv[]) {
     }
 
     unsigned long baudRate = B921600;
-    UARTTransporter transp("/dev/ttyUSB0", baudRate);
-    // MockTransporter transp(50, true);
+    // UARTTransporter transp("/dev/ttyUSB1", baudRate);
+    MockTransporter transp(50, true);
 
     std::vector<DisplayRecord> records;
     records.reserve(100);

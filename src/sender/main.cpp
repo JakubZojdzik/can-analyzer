@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     char *dataStr = argv[3];
 
     char *end;
-    unsigned long id = std::strtoul(idStr, &end, 16);
+    uint32_t id = (uint32_t)std::strtoul(idStr, &end, 16);
     if (*end != 0) {
         std::fprintf(stderr, "Error: invalid CAN ID '%s'\n", idStr);
         return 1;
@@ -57,6 +57,7 @@ int main(int argc, char *argv[]) {
         std::fprintf(stderr, "invalid data: '%s'\n", dataStr);
         return 1;
     }
+    printf("id: %u\nextd: %u\n", msg.identifier, msg.isExtd);
 
     try {
         UARTTransporter transp(port, B921600);

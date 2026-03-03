@@ -2,7 +2,8 @@
 #include <cstdint>
 
 struct CANMessage {
-    unsigned long identifier;
+    uint32_t identifier;
+    uint64_t timestamp;
     bool isRtr;
     bool isExtd;
     uint8_t dlc;

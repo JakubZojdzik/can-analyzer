@@ -50,7 +50,7 @@ void Display::drawRecords(unsigned int startInd, unsigned int endInd) {
             attron(A_REVERSE);
         }
         printw(
-            "   %08lX   |  %d  | ",
+            "   %08X   |  %d  | ",
             curr.msg.identifier,
             curr.msg.isRtr & 1
         );
@@ -89,6 +89,7 @@ void Display::redraw() {
     drawFooter();
     drawRecords(0, records_->size());
 }
+
 
 int Display::handleInput(int ch) {
     switch (ch) {
@@ -131,6 +132,9 @@ int Display::handleInput(int ch) {
             records_->clear();
             selectedRow_ = 0;
             scrollOffset_ = 0;
+            erase();
+            drawHeader();
+            drawFooter();
             break;
 
         case 121: // y
@@ -138,7 +142,7 @@ int Display::handleInput(int ch) {
             if (idx < records_->size()) {
                 const CANMessage &m = (*records_)[idx].msg;
                 char buf[32];
-                int pos = std::snprintf(buf, sizeof(buf), "%lX ", m.identifier);
+                int pos = std::snprintf(buf, sizeof(buf), "%X ", m.identifier);
                 for (uint8_t i = 0; i < m.dlc; i++)
                     pos += std::snprintf(buf + pos, sizeof(buf) - pos, "%02X", m.data[i]);
 

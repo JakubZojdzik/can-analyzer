@@ -33,7 +33,6 @@ UARTTransporter::UARTTransporter(const std::string& portName, int baudRate) {
     dev.c_cc[VMIN]  = 1;               // Blocking read
     dev.c_cc[VTIME] = 0;
 
-    tcflush(fd, TCIFLUSH);
 
     if (tcsetattr(fd, TCSANOW, &dev) != 0) {
         close(fd);
@@ -82,6 +81,7 @@ static void syncMagicBytes(int fd) {
 
 size_t UARTTransporter::receive(CANMessage& msg) {
     syncMagicBytes(serialFd);
+    readExact(serialFd, &msg.timestamp, sizeof(msg.timestamp));
     readExact(serialFd, &msg.identifier, 4);
 
     uint8_t bits;
@@ -90,19 +90,25 @@ size_t UARTTransporter::receive(CANMessage& msg) {
     msg.isExtd = (bits & 2) >> 1;
 
     readExact(serialFd, &msg.dlc, 1);
+    msg.dlc &= 0xf;
     if (msg.dlc > 8)
         throw std::runtime_error("Invalid DLC");
 
     readExact(serialFd, msg.data, msg.dlc);
-    return 6 + msg.dlc;
+    return 16 + msg.dlc;
 }
 
 size_t UARTTransporter::send(CANMessage& msg) {
-    uint8_t buf[16];
+    uint8_t buf[16] = {0};
     size_t nbyte = serializeCanMessage(msg, buf);
-    return write(serialFd, buf, nbyte);
+    size_t res = write(serialFd, buf, nbyte);
+    tcdrain(serialFd);
+    return res;
 }
 
 UARTTransporter::~UARTTransporter() {
-    if (serialFd >= 0) close(serialFd);
+    if (serialFd >= 0) {
+        tcdrain(serialFd);
+        close(serialFd);
+    }
 }
